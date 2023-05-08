@@ -46,12 +46,12 @@ def run(event, context):
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table('volleyball_tracker')
 
-    response = table.get_item(Key={'id': 'current_week'})
+    response = table.get_item(Key={'id': 0})
     current_week = int(response['Item']['current_week'])
     current_week += 1
 
     table.update_item(
-        Key={'id': 'current_week'},
+        Key={'id': 0},
         UpdateExpression='SET current_week = :val1',
         ExpressionAttributeValues={':val1': current_week}
         )
