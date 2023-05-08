@@ -10,8 +10,12 @@ client = gspread.authorize(creds)
 # aws_sns_client = boto3.client('sns', region_name='us-east-1')
 aws_ses_client = boto3.client('ses', region_name = 'us-east-1')
 
+
+with open("current_session.txt", "r") as file:
+    current_session = int(file.read())
+
 sheet_name = 'Volleyball'
-worksheet_name = 'Summer 1'
+worksheet_name = f'Session {current_session}'
 
 sheet = client.open(sheet_name)
 worksheet = sheet.worksheet(worksheet_name)
@@ -22,18 +26,21 @@ player_data = sheet.worksheet('Player_db').get_all_records()
 
 needs_to_respond = []
 
+with open("current_week.txt", "r") as file:
+    current_week = int(file.read())
+    current_week += 1
+
 for record in volley_data:
-    if record['Week 1:'] == '':
+    if record[f'Week {current_week}:'] == '':
         playername = record['Players']
         needs_to_respond.append(playername.rstrip())
 
 for player in player_data:
     if player['Name'] in needs_to_respond:
-        print(f"text {player['Name']} at {player['Phone']}")
         sender = 'leffeler@gmail.com'
         recepient = player['Email']
         subject = 'Missing Volleyball Info'
-        body = 'Volleyball is tomorrow. Please respond on this spreadsheet if you can make it or not: https://docs.google.com/spreadsheets/d/1QlyMbAXxbiUrmJ0TH6HtAPaSJOrArEYKkrKtU2sWUb4/edit#gid=1402272001'
+        body = f'Tomorrow is week {current_week} of volleyball. Please respond on this spreadsheet if you can make it or not: https://docs.google.com/spreadsheets/d/1QlyMbAXxbiUrmJ0TH6HtAPaSJOrArEYKkrKtU2sWUb4/edit#gid=1402272001'
 
         message = {
             'Subject': {
@@ -59,6 +66,19 @@ for player in player_data:
             print(f"Email sent! Message ID: {response['MessageId']}")
         except ClientError as e:
             print(e.response['Error']['Message'])
+
+with open("current_week.txt", "w") as file:
+    file.write('')
+    if current_week == 5:
+        current_week = 0
+        with open("current_session.txt", "w") as file2:
+            file2.write('')
+            current_session += 1
+            if current_session == 5:
+                current_session = 0
+            file2.write(str(current_session))
+    file.write(str(current_week))
+
 
 
 
