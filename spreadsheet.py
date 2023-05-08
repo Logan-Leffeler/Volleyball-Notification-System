@@ -46,6 +46,7 @@ def run(event, context):
         ExpressionAttributeValues={':val1': current_week}
         )
     
+    
     # Figure out what the current session is
 
     response = table.get_item(Key={'id': 'week_counter'})
@@ -65,7 +66,7 @@ def run(event, context):
     # Establish datasets
 
     sheet_name = 'Volleyball'
-    worksheet_name = f'Session {current_session}'
+    worksheet_name = 'Early Summer'
 
     sheet = client.open(sheet_name)
     worksheet = sheet.worksheet(worksheet_name)
@@ -73,6 +74,12 @@ def run(event, context):
     volley_data = worksheet.get_all_records()
 
     player_data = sheet.worksheet('Player_db').get_all_records()
+
+    # Figure out what the current week and date is
+
+
+
+    current_date = volley_data[0][f'Week {current_week}:']
 
     # Loop through players and create a list of players that have not responded
 
@@ -83,36 +90,62 @@ def run(event, context):
             playername = record['Players']
             needs_to_respond.append(playername.rstrip())
 
-    # Loop through players and send emails to ones who have not responded
+
+    # Loop through players and create a list of players that have responded yes
+
+    yes_players = []
+
+    for record in volley_data:
+        if record[f'Week {current_week}:'] == 'Yes ':
+            playername = record['Players']
+            yes_players.append(playername.rstrip())
+
+    # Loop through players and create a list of players that have responded no
+
+    no_players = []
+
+    for record in volley_data:
+        if record[f'Week {current_week}:'] == 'No ':
+            playername = record['Players']
+            no_players.append(playername.rstrip())
+
+    # Loop through players and send emails based on response status
 
     for player in player_data:
         if player['Name'] in needs_to_respond:
-            sender = 'leffeler@gmail.com'
-            recepient = player['Email']
             subject = 'Missing Volleyball Info'
-            body = f'Tomorrow is week {current_week} of volleyball. Please respond on this spreadsheet if you can make it or not: https://docs.google.com/spreadsheets/d/1QlyMbAXxbiUrmJ0TH6HtAPaSJOrArEYKkrKtU2sWUb4/edit#gid=1402272001'
+            body = f'Tomorrow is {current_date}, week {current_week} of volleyball. Please respond on this spreadsheet if you can make it or not: https://docs.google.com/spreadsheets/d/1QlyMbAXxbiUrmJ0TH6HtAPaSJOrArEYKkrKtU2sWUb4/edit#gid=1402272001'
+        elif player['Name'] in yes_players:
+            subject = 'You signed up for Voleyball'
+            body = f'Tomorrow is {current_date}, week {current_week} of volleyball. You are currently signed up as YES. Please respond on this spreadsheet if you can not make it, otherwise ignore this message :)   https://docs.google.com/spreadsheets/d/1QlyMbAXxbiUrmJ0TH6HtAPaSJOrArEYKkrKtU2sWUb4/edit#gid=1402272001'
+        elif player['Name'] in no_players:
+            subject = 'You are signed up as "No" for Volleyball'
+            body = f'Tomorrow is {current_date}, week {current_week} of volleyball. You are currently signed up as NO. Please respond on this spreadsheet if you would like to change to YES, otherwise ignore this message :)    https://docs.google.com/spreadsheets/d/1QlyMbAXxbiUrmJ0TH6HtAPaSJOrArEYKkrKtU2sWUb4/edit#gid=1402272001'
 
-            message = {
-                'Subject': {
-                    'Data': subject
-                },
-                'Body': {
-                    'Text':{
-                        'Data': body
-                    }
+        sender = 'leffeler@gmail.com'
+        recepient = player['Email']
+        
+        message = {
+            'Subject': {
+                'Data': subject
+            },
+            'Body': {
+                'Text':{
+                    'Data': body
                 }
             }
+        }
 
-            try:
-                response = aws_ses_client.send_email(
-                    Source = sender,
-                    Destination = {
-                        'ToAddresses': [
-                            recepient
-                        ]
-                    },
-                    Message = message
-                )
-                print(f"Email sent! Message ID: {response['MessageId']}")
-            except ClientError as e:
-                print(e.response['Error']['Message'])
+        try:
+            response = aws_ses_client.send_email(
+                Source = sender,
+                Destination = {
+                    'ToAddresses': [
+                        recepient
+                    ]
+                },
+                Message = message
+            )
+            print(f"Email sent! Message ID: {response['MessageId']}")
+        except ClientError as e:
+            print(e.response['Error']['Message'])
