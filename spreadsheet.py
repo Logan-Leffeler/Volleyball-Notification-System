@@ -26,21 +26,6 @@ def run(event, context):
     # aws_sns_client = boto3.client('sns', region_name='us-east-1')
     aws_ses_client = boto3.client('ses', region_name = 'us-east-1')
 
-    #  establish datasets
-
-    # with open("current_session.txt", "r") as file:
-    #     current_session = int(file.read())
-
-    sheet_name = 'Volleyball'
-    worksheet_name = 'Session 1'
-
-    sheet = client.open(sheet_name)
-    worksheet = sheet.worksheet(worksheet_name)
-
-    volley_data = worksheet.get_all_records()
-
-    player_data = sheet.worksheet('Player_db').get_all_records()
-
     # Figure out what the current week is
 
     dynamodb = boto3.resource('dynamodb')
@@ -48,6 +33,11 @@ def run(event, context):
 
     response = table.get_item(Key={'id': 'week_counter'})
     current_week = int(response['Item']['current_week'])
+    if current_week > 5:
+        new_session = True
+        current_week = 0
+    else:
+        new_session = False
     current_week += 1
 
     table.update_item(
@@ -55,6 +45,34 @@ def run(event, context):
         UpdateExpression='SET current_week = :val1',
         ExpressionAttributeValues={':val1': current_week}
         )
+    
+    # Figure out what the current session is
+
+    response = table.get_item(Key={'id': 'week_counter'})
+    current_session = int(response['Item']['current_session'])
+
+    if new_session:
+        current_session += 1
+    if current_session > 5:
+        current_session = 1
+
+    table.update_item(
+        Key={'id': 'week_counter'},
+        UpdateExpression='SET current_session = :val1',
+        ExpressionAttributeValues={':val1': current_session}
+        )
+    
+    # Establish datasets
+
+    sheet_name = 'Volleyball'
+    worksheet_name = f'Session {current_session}'
+
+    sheet = client.open(sheet_name)
+    worksheet = sheet.worksheet(worksheet_name)
+
+    volley_data = worksheet.get_all_records()
+
+    player_data = sheet.worksheet('Player_db').get_all_records()
 
     # Loop through players and create a list of players that have not responded
 
@@ -98,23 +116,3 @@ def run(event, context):
                 print(f"Email sent! Message ID: {response['MessageId']}")
             except ClientError as e:
                 print(e.response['Error']['Message'])
-
-
-    # Update week for next week and potentially update session for next session
-
-    # with open("current_week.txt", "w") as file:
-    #     file.write('')
-    #     if current_week == 5:
-    #         current_week = 0
-    #         with open("current_session.txt", "w") as file2:
-    #             file2.write('')
-    #             current_session += 1
-    #             if current_session == 5:
-    #                 current_session = 0
-    #             file2.write(str(current_session))
-    #     file.write(str(current_week))
-
-            # response = aws_sns_client.publish(
-            #     PhoneNumber = str(player['Phone']),
-            #     Message = f"{player['Name']} sign up for vball nerd"
-            # )
