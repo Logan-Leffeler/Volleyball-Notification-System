@@ -46,7 +46,7 @@ def run(event, context):
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table('volleyball_tracker')
 
-    response = table.get_item(Key={'id': 0})
+    response = table.get_item(Key={'id': '0'})
     current_week = int(response['Item']['current_week'])
     current_week += 1
 
