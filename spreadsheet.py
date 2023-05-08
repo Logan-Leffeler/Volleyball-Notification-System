@@ -26,13 +26,13 @@ def run(event, context):
     # aws_sns_client = boto3.client('sns', region_name='us-east-1')
     aws_ses_client = boto3.client('ses', region_name = 'us-east-1')
 
-    # Figure out Current session and establish datasets
+    #  establish datasets
 
-    with open("current_session.txt", "r") as file:
-        current_session = int(file.read())
+    # with open("current_session.txt", "r") as file:
+    #     current_session = int(file.read())
 
     sheet_name = 'Volleyball'
-    worksheet_name = f'Session {current_session}'
+    worksheet_name = 'Session 1'
 
     sheet = client.open(sheet_name)
     worksheet = sheet.worksheet(worksheet_name)
@@ -43,9 +43,18 @@ def run(event, context):
 
     # Figure out what the current week is
 
-    with open("current_week.txt", "r") as file:
-        current_week = int(file.read())
-        current_week += 1
+    dynamodb = boto3.resource('dynamodb')
+    table = dynamodb.Table('volleyball_tracker')
+
+    response = table.get_item(Key={'id': 'current_week'})
+    current_week = int(response['Item']['current_week'])
+    current_week += 1
+
+    table.update_item(
+        Key={'id': 'current_week'},
+        UpdateExpression='SET current_week = :val1',
+        ExpressionAttributeValues={':val1': current_week}
+        )
 
     # Loop through players and create a list of players that have not responded
 
@@ -93,17 +102,17 @@ def run(event, context):
 
     # Update week for next week and potentially update session for next session
 
-    with open("current_week.txt", "w") as file:
-        file.write('')
-        if current_week == 5:
-            current_week = 0
-            with open("current_session.txt", "w") as file2:
-                file2.write('')
-                current_session += 1
-                if current_session == 5:
-                    current_session = 0
-                file2.write(str(current_session))
-        file.write(str(current_week))
+    # with open("current_week.txt", "w") as file:
+    #     file.write('')
+    #     if current_week == 5:
+    #         current_week = 0
+    #         with open("current_session.txt", "w") as file2:
+    #             file2.write('')
+    #             current_session += 1
+    #             if current_session == 5:
+    #                 current_session = 0
+    #             file2.write(str(current_session))
+    #     file.write(str(current_week))
 
             # response = aws_sns_client.publish(
             #     PhoneNumber = str(player['Phone']),
