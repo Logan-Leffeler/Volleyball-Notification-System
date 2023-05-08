@@ -33,7 +33,7 @@ def run(event, context):
 
     response = table.get_item(Key={'id': 'week_counter'})
     current_week = int(response['Item']['current_week'])
-    if current_week > 5:
+    if current_week >= 5:
         new_session = True
         current_week = 0
     else:
@@ -53,7 +53,7 @@ def run(event, context):
 
     if new_session:
         current_session += 1
-    if current_session > 5:
+    if current_session >= 5:
         current_session = 1
 
     table.update_item(
