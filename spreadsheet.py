@@ -4,13 +4,24 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import boto3
 from botocore.exceptions import ClientError
+import os
 
 
 def run(event, context):
     # Connect to google spreadsheet API and establish E-Mail service
 
     scope = ['https://www.googleapis.com/auth/drive']
-    creds = ServiceAccountCredentials.from_json_keyfile_name('virtual-equator-386019-d1063402b3b1.json', scope)
+    creds_file = os.path.join('/tmp', 'virtual-equator-386019-d1063402b3b1.json')
+    s3 = boto3.resource('s3')
+    bucket_name = 'weekly-volleyball-spreadsheets'
+    object_key = 'virtual-equator-386019-d1063402b3b1.json'
+
+    try:
+        s3.Bucket(bucket_name).download_file(object_key, creds_file)
+    except ClientError as e:
+        print(e.response['Error']['Message'])
+
+    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
     client = gspread.authorize(creds)
     # aws_sns_client = boto3.client('sns', region_name='us-east-1')
     aws_ses_client = boto3.client('ses', region_name = 'us-east-1')
