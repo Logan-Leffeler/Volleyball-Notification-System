@@ -1,3 +1,5 @@
+import sys
+sys.path.append('./dependencies')
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import boto3
@@ -6,7 +8,7 @@ from botocore.exceptions import ClientError
 # Connect to google spreadsheet API and establish E-Mail service
 
 scope = ['https://www.googleapis.com/auth/drive']
-creds = ServiceAccountCredentials.from_json_keyfile_name('virtual-equator-386019-aa4e9efb6c66.json', scope)
+creds = ServiceAccountCredentials.from_json_keyfile_name('virtual-equator-386019-d1063402b3b1.json', scope)
 client = gspread.authorize(creds)
 # aws_sns_client = boto3.client('sns', region_name='us-east-1')
 aws_ses_client = boto3.client('ses', region_name = 'us-east-1')
