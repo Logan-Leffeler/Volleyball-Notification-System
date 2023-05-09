@@ -43,6 +43,59 @@ resource "aws_iam_role" "lambda_execution_role" {
   })
 }
 
+resource "aws_dynamodb_table" "volleyball_tracker" {
+  name = "volleyball_tracker"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  attribute {
+    name = "current_week"
+    type = "N"
+  }
+
+    attribute {
+    name = "current_session"
+    type = "N"
+  }
+
+    global_secondary_index {
+    name = "week_index"
+    hash_key = "current_week"
+    projection_type = "ALL"
+  }
+
+    global_secondary_index {
+    name = "session_index"
+    hash_key = "current_session"
+    projection_type = "ALL"
+  }
+}
+
+
+
+resource "aws_dynamodb_table_item" "example_item" {
+  table_name = aws_dynamodb_table.volleyball_tracker.name
+
+  hash_key = aws_dynamodb_table.volleyball_tracker.hash_key
+
+
+  item = <<ITEM
+{
+  "id": {"S": "week_counter"},
+  "current_week": {"N": "0"},
+  "current_session": {"N": "1"}
+}
+ITEM
+}
+
+
+
+
 resource "aws_iam_policy" "lambda_execution_policy" {
   name = "vball_lambda_execution_policy"
 
@@ -65,6 +118,21 @@ resource "aws_iam_policy" "lambda_execution_policy" {
         ]
         Effect   = "Allow"
         Resource = "${aws_s3_bucket.volleyball_spreadsheets.arn}/*"
+      },
+      {
+        Action = [
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem"
+        ]
+        Effect   = "Allow"
+        Resource = "${aws_dynamodb_table.volleyball_tracker.arn}"
+      },
+      {
+        Action = [
+            "ses:SendEmail"
+        ]
+        Effect   = "Allow"
+        Resource = "arn:aws:ses:us-east-1:*:*"
       }
     ]
   })
