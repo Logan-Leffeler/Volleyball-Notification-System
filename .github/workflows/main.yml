@@ -1,0 +1,32 @@
+name: Deploy to S3 and update Lambda
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Upload code to S3 bucket
+        run: |
+          aws s3 cp ./infrastructure/code_zip.zip s3://weekly-volleyball --recursive
+
+      - name: Update Lambda function code
+        run: |
+          aws lambda update-function-code \
+            --function-name volleyball-tracker \
+            --s3-bucket weekly-volleyball \
+            --s3-key code_zip.zip

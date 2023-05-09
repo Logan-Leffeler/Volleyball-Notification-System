@@ -7,9 +7,7 @@ from botocore.exceptions import ClientError
 import os
 
 
-def run(event, context):
-    # Connect to google spreadsheet API and establish E-Mail service
-
+def get_google_creds():
     scope = ['https://www.googleapis.com/auth/drive']
     creds_file = os.path.join('/tmp', 'virtual-equator-386019-d1063402b3b1.json')
     s3 = boto3.resource('s3')
@@ -21,96 +19,41 @@ def run(event, context):
     except ClientError as e:
         print(e.response['Error']['Message'])
 
-    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
-    client = gspread.authorize(creds)
-    # aws_sns_client = boto3.client('sns', region_name='us-east-1')
-    aws_ses_client = boto3.client('ses', region_name = 'us-east-1')
+    return ServiceAccountCredentials.from_json_keyfile_name(creds_file, scope)
 
-    # Figure out what the current week is
 
-    dynamodb = boto3.resource('dynamodb')
-    table = dynamodb.Table('volleyball_tracker')
-
-    response = table.get_item(Key={'id': 'week_counter'})
-    current_week = int(response['Item']['current_week'])
-    if current_week >= 5:
-        new_session = True
-        current_week = 0
-    else:
-        new_session = False
-    current_week += 1
-
-    table.update_item(
-        Key={'id': 'week_counter'},
-        UpdateExpression='SET current_week = :val1',
-        ExpressionAttributeValues={':val1': current_week}
-        )
-    
-    
-    # Figure out what the current session is
-
-    response = table.get_item(Key={'id': 'week_counter'})
-    current_session = int(response['Item']['current_session'])
-
-    if new_session:
-        current_session += 1
-    if current_session >= 5:
-        current_session = 1
-
-    table.update_item(
-        Key={'id': 'week_counter'},
-        UpdateExpression='SET current_session = :val1',
-        ExpressionAttributeValues={':val1': current_session}
-        )
-    
-    # Establish datasets
-
-    sheet_name = 'Volleyball'
-    worksheet_name = 'Early Summer'
-
+def get_worksheet_data(client, sheet_name, worksheet_name):
     sheet = client.open(sheet_name)
     worksheet = sheet.worksheet(worksheet_name)
 
-    volley_data = worksheet.get_all_records()
-
-    player_data = sheet.worksheet('Player_db').get_all_records()
-
-    # Figure out what the current week and date is
+    return worksheet.get_all_records()
 
 
-
+def get_date(volley_data, current_week):
     current_date = volley_data[0][f'Week {current_week}:']
+    return current_date
 
-    # Loop through players and create a list of players that have not responded
 
+def get_player_responses(volley_data, current_week):
     needs_to_respond = []
+    yes_players = []
+    no_players = []
 
     for record in volley_data:
         if record[f'Week {current_week}:'] == '':
             playername = record['Players']
             needs_to_respond.append(playername.rstrip())
-
-
-    # Loop through players and create a list of players that have responded yes
-
-    yes_players = []
-
-    for record in volley_data:
-        if record[f'Week {current_week}:'] == 'Yes ':
+        elif record[f'Week {current_week}:'] == 'Yes ':
             playername = record['Players']
             yes_players.append(playername.rstrip())
-
-    # Loop through players and create a list of players that have responded no
-
-    no_players = []
-
-    for record in volley_data:
-        if record[f'Week {current_week}:'] == 'No ':
+        elif record[f'Week {current_week}:'] == 'No ':
             playername = record['Players']
             no_players.append(playername.rstrip())
 
-    # Loop through players and send emails based on response status
+    return needs_to_respond, yes_players, no_players
 
+
+def send_email(aws_ses_client, player_data, needs_to_respond, yes_players, no_players, current_date, current_week):
     for player in player_data:
         if player['Name'] in needs_to_respond:
             subject = 'Missing Volleyball Info'
@@ -121,16 +64,14 @@ def run(event, context):
         elif player['Name'] in no_players:
             subject = 'You are signed up as "No" for Volleyball'
             body = f'Tomorrow is {current_date}, week {current_week} of volleyball. You are currently signed up as NO. Please respond on this spreadsheet if you would like to change to YES, otherwise ignore this message :)    https://docs.google.com/spreadsheets/d/1QlyMbAXxbiUrmJ0TH6HtAPaSJOrArEYKkrKtU2sWUb4/edit#gid=1402272001'
-
         sender = 'leffeler@gmail.com'
         recepient = player['Email']
-        
-        message = {
+        message={
             'Subject': {
                 'Data': subject
             },
             'Body': {
-                'Text':{
+                'Text': {
                     'Data': body
                 }
             }
@@ -149,3 +90,41 @@ def run(event, context):
             print(f"Email sent! Message ID: {response['MessageId']}")
         except ClientError as e:
             print(e.response['Error']['Message'])
+  
+
+def update_week(dynamodb):
+    table = dynamodb.Table('volleyball_tracker')
+
+    response = table.get_item(Key={'id': 'week_counter'})
+    current_week = int(response['Item']['current_week'])
+
+    if current_week >= 5:
+        current_week = 0
+
+    current_week += 1
+    table.update_item(
+        Key={'id': 'week_counter'},
+        UpdateExpression='SET current_week = :val1',
+        ExpressionAttributeValues={':val1': current_week}
+    )
+    return current_week
+
+
+def run(event, context):
+    creds = get_google_creds()
+    client = gspread.authorize(creds)
+    aws_ses_client = boto3.client('ses', region_name = 'us-east-1')
+    dynamodb = boto3.resource('dynamodb')
+    current_week = update_week(dynamodb)
+    sheet_name = 'Volleyball'
+    worksheet_name = 'Early Summer'
+    player_sheet = "Player_db"
+    volley_data = get_worksheet_data(client, sheet_name, worksheet_name)
+    player_data = get_worksheet_data(client, sheet_name, player_sheet)
+    current_date = get_date(volley_data, current_week)
+    needs_to_respond, yes_players, no_players = get_player_responses(volley_data, current_week)
+    send_email(aws_ses_client, player_data, needs_to_respond, yes_players, no_players, current_date, current_week)
+
+
+
+
