@@ -13,7 +13,7 @@ def run(event, context):
     scope = ['https://www.googleapis.com/auth/drive']
     creds_file = os.path.join('/tmp', 'virtual-equator-386019-d1063402b3b1.json')
     s3 = boto3.resource('s3')
-    bucket_name = 'weekly-volleyball-spreadsheets'
+    bucket_name = 'weekly-volleyball'
     object_key = 'virtual-equator-386019-d1063402b3b1.json'
 
     try:

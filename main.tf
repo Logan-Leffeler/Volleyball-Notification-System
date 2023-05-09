@@ -3,7 +3,27 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "volleyball_spreadsheets" {
-  bucket = "weekly-volleyball-spreadsheets"
+  bucket = "weekly-volleyball"
+}
+
+resource "aws_s3_bucket_versioning" "volleyball_spreadsheets_versioning" {
+  bucket = aws_s3_bucket.volleyball_spreadsheets.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_object" "json_key" {
+  bucket = "weekly-volleyball"
+  key    = "virtual-equator-386019-d1063402b3b1.json"
+  source = "virtual-equator-386019-d1063402b3b1.json"
+}
+
+resource "aws_s3_object" "code_zip" {
+  bucket = "weekly-volleyball"
+  key    = "code_zip.zip"
+  source = "code_zip.zip"
 }
 
 resource "aws_iam_role" "lambda_execution_role" {
@@ -50,59 +70,24 @@ resource "aws_iam_policy" "lambda_execution_policy" {
   })
 }
 
+
 resource "aws_iam_role_policy_attachment" "lambda_execution_policy_attachment" {
   policy_arn = aws_iam_policy.lambda_execution_policy.arn
   role       = aws_iam_role.lambda_execution_role.name
 }
 
-resource "null_resource" "zip_files" {
-  provisioner "local-exec" {
-    command = "zip -j ./Archive.zip ./dependencies/* ./spreadsheets.py"
-  }
-}
-
-data "archive_file" "my_zip" {
-  type        = "zip"
-  source_file = "${null_resource.zip_files.id}"
+data "aws_s3_object" "code_zip" {
+  bucket = aws_s3_bucket.volleyball_spreadsheets.id
+  key    = "code_zip.zip"
 }
 
 resource "aws_lambda_function" "volleyball_tracker" {
-  filename         = data.archive_file.lambda_zip.output_path
-  function_name    = "volleyball-tracker"
   role             = aws_iam_role.lambda_execution_role.arn
-  handler          = "lambda_function.run"
+  filename         = "code_zip.zip"
+  function_name    = "volleyball-tracker"
+  handler          = "spreadsheet.run"
   runtime          = "python3.8"
-  timeout          = 10
+  timeout          = 30
   memory_size      = 128
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
-  environment {
-    variables = {
-      SHEET_NAME       = "Volleyball"
-      WORKSHEET_NAME   = "Early Summer"
-      BUCKET_NAME      = aws_s3_bucket.volleyball_spreadsheets.id
-      OBJECT_KEY       = "virtual-equator-386019-d1063402b3b1.json"
-      TABLE_NAME       = "volleyball_tracker"
-      REGION           = "us-east-1"
-    }
-  }
-}
-
-resource "aws_cloudwatch_event_rule" "lambda_trigger" {
-  name        = "vball-scheduler"
-  description = "Trigger the lambda function once every 7 days starting May 25th"
-  schedule_expression = "cron(0 23 25-31 5/7 ? 2023)"
-}
-
-resource "aws_lambda_permission" "allow_eventbridge_trigger" {
-  statement_id  = "AllowExecutionFromEventBridge"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.volleyball_tracker.arn
-  principal     = "events.amazonaws.com"
-}
-
-resource "aws_cloudwatch_event_target" "target_lambda_function" {
-  rule      = aws_cloudwatch_event_rule.lambda_trigger.name
-  arn       = aws_lambda_function.volleyball_tracker.arn
-  target_id = "TargetFunctionV1"
 }
 

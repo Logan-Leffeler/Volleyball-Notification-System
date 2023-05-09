@@ -1,3 +1,12 @@
 virtual-equator-386019-d1063402b3b1.json
 
 Archive.zip
+
+.terraform.lock.hcl
+.terraform/
+
+code_zip.zip
+
+stored.txt
+terraform.tfstate
+terraform.tfstate.backup
