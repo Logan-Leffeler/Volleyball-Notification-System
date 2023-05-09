@@ -15,12 +15,14 @@ resource "aws_s3_bucket_versioning" "volleyball_spreadsheets_versioning" {
 }
 
 resource "aws_s3_object" "json_key" {
+  depends_on = [ aws_s3_bucket.aws_s3_bucket.volleyball_spreadsheets, aws_s3_bucket_versioning.volleyball_spreadsheets_versioning ]
   bucket = "weekly-volleyball"
   key    = "virtual-equator-386019-d1063402b3b1.json"
   source = "virtual-equator-386019-d1063402b3b1.json"
 }
 
 resource "aws_s3_object" "code_zip" {
+  depends_on = [ aws_s3_bucket.aws_s3_bucket.volleyball_spreadsheets, aws_s3_bucket_versioning.volleyball_spreadsheets_versioning ]
   bucket = "weekly-volleyball"
   key    = "code_zip.zip"
   source = "code_zip.zip"
@@ -52,33 +54,10 @@ resource "aws_dynamodb_table" "volleyball_tracker" {
     name = "id"
     type = "S"
   }
-
-  attribute {
-    name = "current_week"
-    type = "N"
-  }
-
-    attribute {
-    name = "current_session"
-    type = "N"
-  }
-
-    global_secondary_index {
-    name = "week_index"
-    hash_key = "current_week"
-    projection_type = "ALL"
-  }
-
-    global_secondary_index {
-    name = "session_index"
-    hash_key = "current_session"
-    projection_type = "ALL"
-  }
 }
 
-
-
 resource "aws_dynamodb_table_item" "example_item" {
+  depends_on = [ aws_dynamodb_table.volleyball_tracker ]
   table_name = aws_dynamodb_table.volleyball_tracker.name
 
   hash_key = aws_dynamodb_table.volleyball_tracker.hash_key
@@ -144,12 +123,12 @@ resource "aws_iam_role_policy_attachment" "lambda_execution_policy_attachment" {
   role       = aws_iam_role.lambda_execution_role.name
 }
 
-data "aws_s3_object" "code_zip" {
-  bucket = aws_s3_bucket.volleyball_spreadsheets.id
-  key    = "code_zip.zip"
-}
-
 resource "aws_lambda_function" "volleyball_tracker" {
+  depends_on = [ 
+    aws_iam_role_policy_attachment.lambda_execution_policy_attachment,
+    aws_dynamodb_table_item,
+    aws_s3_object
+   ]
   role             = aws_iam_role.lambda_execution_role.arn
   filename         = "code_zip.zip"
   function_name    = "volleyball-tracker"

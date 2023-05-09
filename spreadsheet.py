@@ -31,6 +31,7 @@ def run(event, context):
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table('volleyball_tracker')
 
+
     response = table.get_item(Key={'id': 'week_counter'})
     current_week = int(response['Item']['current_week'])
     if current_week >= 5:
@@ -46,6 +47,7 @@ def run(event, context):
         ExpressionAttributeValues={':val1': current_week}
         )
     
+    # End update week function
     
     # Figure out what the current session is
 
@@ -109,8 +111,10 @@ def run(event, context):
             playername = record['Players']
             no_players.append(playername.rstrip())
 
-    # Loop through players and send emails based on response status
+    # Loop through players and send emails based on response status 
 
+    # TODO: Make function get subject/body
+    # Potentially make Email Service class
     for player in player_data:
         if player['Name'] in needs_to_respond:
             subject = 'Missing Volleyball Info'
