@@ -4,7 +4,7 @@ Archive.zip
 
 .terraform.lock.hcl
 .terraform/
-
+dependencies/*
 code_zip.zip
 
 stored.txt
