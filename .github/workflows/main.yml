@@ -22,7 +22,7 @@ jobs:
 
       - name: Upload code to S3 bucket
         run: |
-          aws s3 cp ./infrastructure/code_zip.zip s3://weekly-volleyball --recursive
+          aws s3 cp /infrastructure/code_zip.zip s3://weekly-volleyball --recursive
 
       - name: Update Lambda function code
         run: |
