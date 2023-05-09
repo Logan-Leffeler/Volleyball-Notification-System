@@ -9,7 +9,6 @@ import os
 
 def run(event, context):
     # Connect to google spreadsheet API and establish E-Mail service
-
     scope = ['https://www.googleapis.com/auth/drive']
     creds_file = os.path.join('/tmp', 'virtual-equator-386019-d1063402b3b1.json')
     s3 = boto3.resource('s3')
