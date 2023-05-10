@@ -64,8 +64,7 @@ resource "aws_dynamodb_table_item" "example_item" {
   item       = <<ITEM
 {
   "id": {"S": "week_counter"},
-  "current_week": {"N": "0"},
-  "current_session": {"N": "1"}
+  "current_week": {"N": "0"}
 }
 ITEM
 }

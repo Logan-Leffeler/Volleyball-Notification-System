@@ -28,7 +28,6 @@ def get_worksheet_data(client, sheet_name, worksheet_name):
 
     return worksheet.get_all_records()
 
-
 def get_date(volley_data, current_week):
     current_date = volley_data[0][f'Week {current_week}:']
     return current_date
@@ -111,7 +110,6 @@ def update_week(dynamodb):
 
 
 def run(event, context):
-    print("Pancakes")
     creds = get_google_creds()
     client = gspread.authorize(creds)
     aws_ses_client = boto3.client('ses', region_name = 'us-east-1')
