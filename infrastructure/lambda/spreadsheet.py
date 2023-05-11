@@ -110,7 +110,6 @@ def update_week(dynamodb):
 
 
 def run(event, context):
-    print("Hi Brandon")
     creds = get_google_creds()
     client = gspread.authorize(creds)
     aws_ses_client = boto3.client('ses', region_name = 'us-east-1')
