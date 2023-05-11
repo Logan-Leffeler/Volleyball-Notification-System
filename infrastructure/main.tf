@@ -21,12 +21,6 @@ resource "aws_s3_object" "json_key" {
   source     = "virtual-equator-386019-d1063402b3b1.json"
 }
 
-resource "aws_s3_object" "code_zip" {
-  depends_on = [ aws_s3_bucket.volleyball_spreadsheets, aws_s3_bucket_versioning.volleyball_spreadsheets_versioning ]
-  bucket     = "weekly-volleyball"
-  key        = "code_zip.zip"
-  source     = "code_zip.zip"
-}
 
 resource "aws_iam_role" "lambda_execution_role" {
   name = "vball_lambda_execution_role"

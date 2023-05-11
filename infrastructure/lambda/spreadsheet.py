@@ -110,6 +110,7 @@ def update_week(dynamodb):
 
 
 def run(event, context):
+    print("Hi Brandon")
     creds = get_google_creds()
     client = gspread.authorize(creds)
     aws_ses_client = boto3.client('ses', region_name = 'us-east-1')
@@ -123,6 +124,7 @@ def run(event, context):
     current_date = get_date(volley_data, current_week)
     needs_to_respond, yes_players, no_players = get_player_responses(volley_data, current_week)
     send_email(aws_ses_client, player_data, needs_to_respond, yes_players, no_players, current_date, current_week)
+
 
 
 
